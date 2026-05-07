@@ -32,6 +32,23 @@ final class DecisionStore: ObservableObject {
         save()
     }
 
+    func updateDecision(forSelectedAssetLocalIdentifier identifier: String, monthKey: String, to decision: PhotoDecisionType) {
+        guard let entry = groupDecisions.first(where: { _, value in
+            value.monthKey == monthKey && value.selectedAssetLocalIdentifier == identifier
+        }) else { return }
+
+        var updated = entry.value
+        updated.decision = decision
+        updated.decidedAt = Date()
+        groupDecisions[entry.key] = updated
+
+        if selectedCoverByMonth[monthKey] == identifier && decision != .keep {
+            selectedCoverByMonth.removeValue(forKey: monthKey)
+        }
+
+        save()
+    }
+
     func undo(groupId: String) {
         groupDecisions.removeValue(forKey: groupId)
         save()
@@ -52,6 +69,10 @@ final class DecisionStore: ObservableObject {
     func setCover(_ identifier: String, monthKey: String) {
         selectedCoverByMonth[monthKey] = identifier
         save()
+    }
+
+    func isCover(_ identifier: String, monthKey: String) -> Bool {
+        selectedCoverByMonth[monthKey] == identifier
     }
 
     private func load() {
