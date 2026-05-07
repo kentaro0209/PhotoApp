@@ -29,11 +29,13 @@ final class PhotoLibraryService: ObservableObject {
         return counts.keys.sorted(by: >).map { monthKey in
             let total = counts[monthKey, default: 0]
             let groupDecisions = decisionStore.groupDecisions(for: monthKey)
-            let processedGroups = groupDecisions.filter { $0.decision != .unprocessed }
+            let processedIdentifiers = Set(groupDecisions
+                .filter { $0.decision != .unprocessed }
+                .compactMap(\.selectedAssetLocalIdentifier))
             return MonthSummary(
                 monthKey: monthKey,
                 totalCount: total,
-                processedCount: min(total, processedGroups.count),
+                processedCount: min(total, processedIdentifiers.count),
                 keepCount: groupDecisions.filter { $0.decision == .keep }.count,
                 holdCount: groupDecisions.filter { $0.decision == .hold }.count,
                 rejectCount: groupDecisions.filter { $0.decision == .reject }.count,

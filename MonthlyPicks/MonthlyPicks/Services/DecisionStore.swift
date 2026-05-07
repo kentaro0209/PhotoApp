@@ -5,6 +5,7 @@ import Foundation
 final class DecisionStore: ObservableObject {
     @Published private(set) var groupDecisions: [String: GroupDecision] = [:]
     @Published private(set) var selectedCoverByMonth: [String: String] = [:]
+    @Published private(set) var groupsByMonth: [String: [PhotoGroup]] = [:]
     private let fileURL: URL
 
     init() {
@@ -19,6 +20,29 @@ final class DecisionStore: ObservableObject {
 
     func decision(for groupId: String) -> GroupDecision? {
         groupDecisions[groupId]
+    }
+
+    func groups(for monthKey: String, matching assetIdentifiers: [String]) -> [PhotoGroup]? {
+        guard let stored = groupsByMonth[monthKey], !stored.isEmpty else { return nil }
+        let currentIdentifiers = Set(assetIdentifiers)
+        let filtered = stored.compactMap { group -> PhotoGroup? in
+            let identifiers = group.assetLocalIdentifiers.filter { currentIdentifiers.contains($0) }
+            guard !identifiers.isEmpty else { return nil }
+            var updated = group
+            updated.assetLocalIdentifiers = identifiers
+            if let representative = group.representativeAssetLocalIdentifier, currentIdentifiers.contains(representative) {
+                updated.representativeAssetLocalIdentifier = representative
+            } else {
+                updated.representativeAssetLocalIdentifier = identifiers.first
+            }
+            return updated
+        }
+        return filtered.isEmpty ? nil : filtered
+    }
+
+    func saveGroups(_ groups: [PhotoGroup], monthKey: String) {
+        groupsByMonth[monthKey] = groups
+        save()
     }
 
     func record(group: PhotoGroup, decision: PhotoDecisionType, selectedAssetLocalIdentifier: String?) {
@@ -80,10 +104,11 @@ final class DecisionStore: ObservableObject {
               let payload = try? JSONDecoder().decode(Payload.self, from: data) else { return }
         groupDecisions = Dictionary(uniqueKeysWithValues: payload.groupDecisions.map { ($0.groupId, $0) })
         selectedCoverByMonth = payload.selectedCoverByMonth
+        groupsByMonth = payload.groupsByMonth ?? [:]
     }
 
     private func save() {
-        let payload = Payload(groupDecisions: Array(groupDecisions.values), selectedCoverByMonth: selectedCoverByMonth)
+        let payload = Payload(groupDecisions: Array(groupDecisions.values), selectedCoverByMonth: selectedCoverByMonth, groupsByMonth: groupsByMonth)
         guard let data = try? JSONEncoder().encode(payload) else { return }
         try? data.write(to: fileURL, options: [.atomic])
     }
@@ -91,5 +116,6 @@ final class DecisionStore: ObservableObject {
     private struct Payload: Codable {
         var groupDecisions: [GroupDecision]
         var selectedCoverByMonth: [String: String]
+        var groupsByMonth: [String: [PhotoGroup]]?
     }
 }

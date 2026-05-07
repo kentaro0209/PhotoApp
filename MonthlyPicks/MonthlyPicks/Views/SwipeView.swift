@@ -115,10 +115,16 @@ struct SwipeView: View {
     private func load() async {
         isLoading = true
         assets = appState.photoLibrary.fetchAssets(monthKey: monthKey)
-        loadMessage = "似た写真をまとめています"
-        let photoLibrary = appState.photoLibrary
-        groups = await appState.grouping.groups(for: assets, monthKey: monthKey) { asset in
-            await photoLibrary.requestImageAsync(for: asset, targetSize: CGSize(width: 180, height: 180))
+        let identifiers = assets.map(\.localIdentifier)
+        if let storedGroups = appState.decisions.groups(for: monthKey, matching: identifiers) {
+            groups = storedGroups
+        } else {
+            loadMessage = "似た写真をまとめています"
+            let photoLibrary = appState.photoLibrary
+            groups = await appState.grouping.groups(for: assets, monthKey: monthKey) { asset in
+                await photoLibrary.requestImageAsync(for: asset, targetSize: CGSize(width: 180, height: 180))
+            }
+            appState.decisions.saveGroups(groups, monthKey: monthKey)
         }
         groups = groups.filter { appState.decisions.decision(for: $0.groupId) == nil }
         currentIndex = 0
