@@ -1,0 +1,144 @@
+import Photos
+import SwiftUI
+
+struct SwipeView: View {
+    @EnvironmentObject private var appState: AppState
+    let monthKey: String
+    @State private var assets: [PHAsset] = []
+    @State private var groups: [PhotoGroup] = []
+    @State private var currentIndex = 0
+    @State private var offset: CGSize = .zero
+    @State private var isLoading = true
+    @State private var loadMessage = "写真を読み込んでいます"
+
+    private var currentGroup: PhotoGroup? {
+        guard currentIndex < groups.count else { return nil }
+        return groups[currentIndex]
+    }
+
+    private var summary: MonthSummary {
+        appState.photoLibrary.fetchMonthSummaries(decisionStore: appState.decisions).first { $0.monthKey == monthKey }
+        ?? MonthSummary(monthKey: monthKey, totalCount: assets.count, processedCount: currentIndex, keepCount: 0, holdCount: 0, rejectCount: 0, targetCount: MonthSummary.targetCount(for: assets.count))
+    }
+
+    var body: some View {
+        VStack(spacing: 16) {
+            header
+            Spacer(minLength: 0)
+            if isLoading {
+                ProgressView(loadMessage)
+                    .padding()
+            } else if let currentGroup {
+                PhotoCardView(group: currentGroup, assets: assetsForCurrentGroup)
+                    .offset(offset)
+                    .rotationEffect(.degrees(Double(offset.width / 24)))
+                    .gesture(dragGesture)
+                    .animation(.spring(response: 0.28, dampingFraction: 0.82), value: offset)
+                actionBar
+            } else {
+                ContentUnavailableView {
+                    Label("今日はここまででOKです", systemImage: "checkmark.circle")
+                } description: {
+                    Text("採用写真を確認して、アルバムやPDFを作れます。")
+                } actions: {
+                    NavigationLink("レビューへ進む") {
+                        ReviewView(monthKey: monthKey)
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .padding()
+        .navigationTitle(DateUtils.title(for: monthKey))
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            NavigationLink("レビュー") {
+                ReviewView(monthKey: monthKey)
+            }
+        }
+        .task { await load() }
+    }
+
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(DateUtils.title(for: monthKey))
+                .font(.headline)
+            ProgressView(value: summary.progress)
+            HStack {
+                Text("処理済み \(summary.processedCount) / \(summary.totalCount)")
+                Spacer()
+                Text("採用 \(summary.keepCount) / 目標 \(summary.targetCount)")
+            }
+            .font(.footnote)
+            .foregroundStyle(.secondary)
+            if let currentGroup {
+                Text("似た写真 1 / \(currentGroup.assetLocalIdentifiers.count)")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private var actionBar: some View {
+        HStack(spacing: 12) {
+            Button("戻る", systemImage: "arrow.uturn.backward") { undo() }
+            Button("除外", systemImage: "xmark") { decide(.reject) }
+            Button("保留", systemImage: "clock") { decide(.hold) }
+            Button("採用", systemImage: "heart.fill") { decide(.keep) }
+                .buttonStyle(.borderedProminent)
+        }
+        .buttonStyle(.bordered)
+    }
+
+    private var assetsForCurrentGroup: [PHAsset] {
+        guard let currentGroup else { return [] }
+        return appState.photoLibrary.assets(with: currentGroup.assetLocalIdentifiers)
+    }
+
+    private var dragGesture: some Gesture {
+        DragGesture()
+            .onChanged { offset = $0.translation }
+            .onEnded { value in
+                if value.translation.width > 120 {
+                    decide(.keep)
+                } else if value.translation.width < -120 {
+                    decide(.reject)
+                } else if value.translation.height > 120 {
+                    decide(.hold)
+                } else {
+                    offset = .zero
+                }
+            }
+    }
+
+    private func load() async {
+        isLoading = true
+        assets = appState.photoLibrary.fetchAssets(monthKey: monthKey)
+        loadMessage = "似た写真をまとめています"
+        let photoLibrary = appState.photoLibrary
+        groups = await appState.grouping.groups(for: assets, monthKey: monthKey) { asset in
+            await photoLibrary.requestImageAsync(for: asset, targetSize: CGSize(width: 180, height: 180))
+        }
+        groups = groups.filter { appState.decisions.decision(for: $0.groupId) == nil }
+        currentIndex = 0
+        isLoading = false
+    }
+
+    private func decide(_ type: PhotoDecisionType) {
+        guard let group = currentGroup else { return }
+        let selected = group.representativeAssetLocalIdentifier ?? group.assetLocalIdentifiers.first
+        appState.decisions.record(group: group, decision: type, selectedAssetLocalIdentifier: selected)
+        offset = type == .keep ? CGSize(width: 500, height: 0) : type == .reject ? CGSize(width: -500, height: 0) : CGSize(width: 0, height: 500)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
+            currentIndex += 1
+            offset = .zero
+        }
+    }
+
+    private func undo() {
+        guard currentIndex > 0 else { return }
+        currentIndex -= 1
+        appState.decisions.undo(groupId: groups[currentIndex].groupId)
+    }
+}

@@ -1,0 +1,36 @@
+name: iOS Build
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "MonthlyPicks/**"
+      - ".github/workflows/ios-build.yml"
+  pull_request:
+    paths:
+      - "MonthlyPicks/**"
+      - ".github/workflows/ios-build.yml"
+
+jobs:
+  build:
+    name: Build MonthlyPicks
+    runs-on: macos-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Build for iOS Simulator
+        run: |
+          xcodebuild \
+            -project MonthlyPicks/MonthlyPicks.xcodeproj \
+            -target MonthlyPicks \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO \
+            build
