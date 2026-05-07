@@ -30,7 +30,7 @@ struct AlbumDraftView: View {
                     NavigationLink {
                         PDFExportView(draft: draft)
                     } label: {
-                        Label("PDFを作成", systemImage: "square.and.arrow.up")
+                        Label("フォトブックPDFを作成", systemImage: "square.and.arrow.up")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
@@ -39,7 +39,7 @@ struct AlbumDraftView: View {
                 }
             }
         }
-        .navigationTitle("原稿プレビュー")
+        .navigationTitle("フォトブック原稿")
         .task { load() }
         .onAppear { load() }
     }
@@ -83,7 +83,7 @@ private struct DraftAssetGrid: View {
 
     var body: some View {
         if assets.isEmpty {
-            ContentUnavailableView("PDFに入れる写真がありません", systemImage: "photo")
+            ContentUnavailableView("フォトブックに入れる写真がありません", systemImage: "photo")
         } else {
             LazyVGrid(columns: columns, spacing: 14) {
                 ForEach(assets, id: \.localIdentifier) { asset in

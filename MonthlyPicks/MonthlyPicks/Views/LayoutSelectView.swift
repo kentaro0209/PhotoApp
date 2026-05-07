@@ -22,6 +22,6 @@ struct LayoutSelectView: View {
             }
             .foregroundStyle(.secondary)
         }
-        .navigationTitle("レイアウト")
+        .navigationTitle("フォトブック")
     }
 }

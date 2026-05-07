@@ -1,17 +1,17 @@
-# PhotoApp / Monthly Picks
+# PhotoApp / Family Picks
 
-Monthly Picks is an iOS SwiftUI app for choosing representative photos from each month, then exporting them as an iOS Photos album or a printable PDF draft.
+Family Picks is an iOS SwiftUI app for slowly turning family photos into printable memory books. It uses months as a calm way to browse the camera roll, but there is no deadline or pressure to keep up every month.
 
 ## Current MVP
 
 - Photo library permission flow
-- Monthly photo list
-- Swipe decisions: keep, reject, hold
+- Month-based photo list
+- Swipe decisions with gentle labels: keep, later, skip this time
 - Decision persistence
 - Similar-photo grouping with a lightweight hash/time/location score
-- Review screen for keep/hold photos
+- Review screen for photos to keep or revisit later
 - Album export into iOS Photos
-- A4 landscape PDF export with cover and 4 photos per page
+- A4 landscape family photobook PDF export with cover and 4 photos per page
 - GitHub Actions build on a macOS runner
 
 ## Development Flow From Windows/Linux

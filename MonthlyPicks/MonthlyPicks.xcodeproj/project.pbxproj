@@ -255,8 +255,9 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "選んだ写真を新しいアルバムに保存するために使用します。";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "月ごとの写真を表示し、代表写真を選ぶために使用します。";
+				INFOPLIST_KEY_CFBundleDisplayName = "Family Picks";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "残した写真を家族の写真アルバムに保存するために使用します。";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "月ごとの家族写真を表示し、フォトブックに残す写真を選ぶために使用します。";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -283,8 +284,9 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "選んだ写真を新しいアルバムに保存するために使用します。";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "月ごとの写真を表示し、代表写真を選ぶために使用します。";
+				INFOPLIST_KEY_CFBundleDisplayName = "Family Picks";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "残した写真を家族の写真アルバムに保存するために使用します。";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "月ごとの家族写真を表示し、フォトブックに残す写真を選ぶために使用します。";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;

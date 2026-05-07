@@ -5,7 +5,7 @@ struct PDFExportView: View {
     @EnvironmentObject private var appState: AppState
     let draft: AlbumDraft
     @State private var pdfURL: URL?
-    @State private var message = "PDFを作成できます。"
+    @State private var message = "フォトブックPDFを作成できます。"
     @State private var isWorking = false
     @State private var showingShare = false
 
@@ -22,13 +22,13 @@ struct PDFExportView: View {
             Button {
                 Task { await export() }
             } label: {
-                Label(isWorking ? "作成中" : "PDFを作成して共有", systemImage: "square.and.arrow.up")
+                Label(isWorking ? "作成中" : "フォトブックPDFを共有", systemImage: "square.and.arrow.up")
             }
             .buttonStyle(.borderedProminent)
             .disabled(isWorking || draft.photoAssetLocalIdentifiers.isEmpty)
         }
         .padding()
-        .navigationTitle("PDF出力")
+        .navigationTitle("フォトブックPDF")
         .sheet(isPresented: $showingShare) {
             if let pdfURL {
                 ShareSheet(items: [pdfURL])
@@ -45,7 +45,7 @@ struct PDFExportView: View {
                 await appState.photoLibrary.requestImageAsync(for: asset, targetSize: CGSize(width: 1600, height: 1200), contentMode: .aspectFit)
             }
             pdfURL = url
-            message = "PDFを作成しました。保存・印刷・送信できます。"
+            message = "フォトブックPDFを作成しました。保存・印刷・送信できます。"
             showingShare = true
         } catch {
             message = error.localizedDescription

@@ -11,8 +11,8 @@ struct ReviewView: View {
     var body: some View {
         ScrollView {
             Picker("表示", selection: $selectedTab) {
-                Text("採用").tag(0)
-                Text("保留").tag(1)
+                Text("残す").tag(0)
+                Text("あとで").tag(1)
             }
             .pickerStyle(.segmented)
             .padding(.horizontal)
@@ -20,8 +20,8 @@ struct ReviewView: View {
             if selectedTab == 0 {
                 ReviewAssetGrid(
                     assets: keepAssets,
-                    emptyTitle: "採用写真はまだありません",
-                    primaryActionTitle: "採用解除",
+                    emptyTitle: "残す写真はまだありません",
+                    primaryActionTitle: "あとで見る",
                     primaryActionSystemImage: "minus.circle",
                     secondaryActionTitle: "表紙にする",
                     secondaryActionSystemImage: "star",
@@ -39,8 +39,8 @@ struct ReviewView: View {
             } else {
                 ReviewAssetGrid(
                     assets: holdAssets,
-                    emptyTitle: "保留写真はありません",
-                    primaryActionTitle: "採用へ移動",
+                    emptyTitle: "あとで見る写真はありません",
+                    primaryActionTitle: "残す",
                     primaryActionSystemImage: "heart.fill",
                     secondaryActionTitle: nil,
                     secondaryActionSystemImage: nil,
@@ -54,15 +54,15 @@ struct ReviewView: View {
                 .padding(.horizontal)
             }
         }
-        .navigationTitle("レビュー")
+        .navigationTitle("見返す")
         .toolbar {
             ToolbarItemGroup(placement: .bottomBar) {
-                NavigationLink("アルバム") {
+                NavigationLink("写真アルバム") {
                     AlbumExportView(monthKey: monthKey)
                 }
                 .disabled(keepAssets.isEmpty)
                 Spacer()
-                NavigationLink("PDF") {
+                NavigationLink("フォトブック") {
                     LayoutSelectView(monthKey: monthKey)
                 }
                 .disabled(keepAssets.isEmpty)

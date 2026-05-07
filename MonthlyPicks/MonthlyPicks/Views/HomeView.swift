@@ -32,7 +32,7 @@ struct HomeView: View {
                     }
                 }
             }
-            .navigationTitle("Monthly Picks")
+            .navigationTitle("Family Picks")
             .navigationDestination(for: String.self) { monthKey in
                 SwipeView(monthKey: monthKey)
             }
@@ -77,9 +77,9 @@ private struct MonthRow: View {
             }
             ProgressView(value: summary.progress)
             HStack {
-                Text("処理済み \(summary.processedCount) / \(summary.totalCount)")
+                Text("見た写真 \(summary.processedCount) / \(summary.totalCount)")
                 Spacer()
-                Text("採用 \(summary.keepCount) / 目標 \(summary.targetCount)")
+                Text("残す \(summary.keepCount) / 目安 \(summary.targetCount)")
             }
             .font(.subheadline)
             .foregroundStyle(.secondary)

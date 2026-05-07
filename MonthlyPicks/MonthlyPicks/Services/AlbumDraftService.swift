@@ -5,7 +5,7 @@ struct AlbumDraftService {
         AlbumDraft(
             draftId: UUID().uuidString,
             monthKey: monthKey,
-            title: "Monthly Picks \(monthKey)",
+            title: "Family Picks \(monthKey)",
             pageSize: .a4Landscape,
             layoutStyle: .fourPerPage,
             photoAssetLocalIdentifiers: identifiers,

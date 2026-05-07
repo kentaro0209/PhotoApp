@@ -36,7 +36,7 @@ struct SwipeView: View {
                     Text(loadMessage)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
-                    Button("解析せずに始める") {
+                    Button("すぐ始める") {
                         startWithSinglePhotoGroups()
                     }
                     .buttonStyle(.bordered)
@@ -54,9 +54,9 @@ struct SwipeView: View {
                 ContentUnavailableView {
                     Label("今日はここまででOKです", systemImage: "checkmark.circle")
                 } description: {
-                    Text("採用写真を確認して、アルバムやPDFを作れます。")
+                    Text("残した写真を見返して、家族のフォトブックを作れます。")
                 } actions: {
-                    NavigationLink("レビューへ進む") {
+                    NavigationLink("見返す") {
                         ReviewView(monthKey: monthKey)
                     }
                     .buttonStyle(.borderedProminent)
@@ -68,7 +68,7 @@ struct SwipeView: View {
         .navigationTitle(DateUtils.title(for: monthKey))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            NavigationLink("レビュー") {
+            NavigationLink("見返す") {
                 ReviewView(monthKey: monthKey)
             }
         }
@@ -81,9 +81,9 @@ struct SwipeView: View {
                 .font(.headline)
             ProgressView(value: summary.progress)
             HStack {
-                Text("処理済み \(summary.processedCount) / \(summary.totalCount)")
+                Text("見た写真 \(summary.processedCount) / \(summary.totalCount)")
                 Spacer()
-                Text("採用 \(summary.keepCount) / 目標 \(summary.targetCount)")
+                Text("残す \(summary.keepCount) / 目安 \(summary.targetCount)")
             }
             .font(.footnote)
             .foregroundStyle(.secondary)
@@ -98,9 +98,9 @@ struct SwipeView: View {
     private var actionBar: some View {
         HStack(spacing: 12) {
             Button("戻る", systemImage: "arrow.uturn.backward") { undo() }
-            Button("除外", systemImage: "xmark") { decide(.reject) }
-            Button("保留", systemImage: "clock") { decide(.hold) }
-            Button("採用", systemImage: "heart.fill") { decide(.keep) }
+            Button("見送る", systemImage: "xmark") { decide(.reject) }
+            Button("あとで", systemImage: "clock") { decide(.hold) }
+            Button("残す", systemImage: "heart.fill") { decide(.keep) }
                 .buttonStyle(.borderedProminent)
         }
         .buttonStyle(.bordered)
