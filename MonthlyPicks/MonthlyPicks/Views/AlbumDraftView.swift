@@ -20,7 +20,12 @@ struct AlbumDraftView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                             .padding(.horizontal)
                     }
-                    PhotoGridView(assets: assets, emptyTitle: "PDFに入れる写真がありません")
+                    DraftAssetGrid(
+                        assets: assets,
+                        coverIdentifier: draft.coverAssetLocalIdentifier,
+                        setCover: setCover,
+                        remove: remove
+                    )
                         .padding(.horizontal)
                     NavigationLink {
                         PDFExportView(draft: draft)
@@ -29,6 +34,7 @@ struct AlbumDraftView: View {
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
+                    .disabled(assets.isEmpty)
                     .padding()
                 }
             }
@@ -46,5 +52,78 @@ struct AlbumDraftView: View {
             identifiers: identifiers,
             coverIdentifier: appState.decisions.selectedCoverByMonth[monthKey]
         )
+    }
+
+    private func setCover(_ asset: PHAsset) {
+        guard var updated = draft else { return }
+        updated.coverAssetLocalIdentifier = asset.localIdentifier
+        updated.updatedAt = Date()
+        draft = updated
+    }
+
+    private func remove(_ asset: PHAsset) {
+        guard var updated = draft else { return }
+        updated.photoAssetLocalIdentifiers.removeAll { $0 == asset.localIdentifier }
+        if updated.coverAssetLocalIdentifier == asset.localIdentifier {
+            updated.coverAssetLocalIdentifier = updated.photoAssetLocalIdentifiers.first
+        }
+        updated.updatedAt = Date()
+        draft = updated
+        assets = appState.photoLibrary.assets(with: updated.photoAssetLocalIdentifiers)
+    }
+}
+
+private struct DraftAssetGrid: View {
+    let assets: [PHAsset]
+    let coverIdentifier: String?
+    let setCover: (PHAsset) -> Void
+    let remove: (PHAsset) -> Void
+
+    private let columns = [GridItem(.adaptive(minimum: 148), spacing: 12)]
+
+    var body: some View {
+        if assets.isEmpty {
+            ContentUnavailableView("PDFに入れる写真がありません", systemImage: "photo")
+        } else {
+            LazyVGrid(columns: columns, spacing: 14) {
+                ForEach(assets, id: \.localIdentifier) { asset in
+                    VStack(spacing: 8) {
+                        ZStack(alignment: .topTrailing) {
+                            PhotoThumbnailView(asset: asset, targetSize: CGSize(width: 360, height: 360))
+                                .aspectRatio(1, contentMode: .fill)
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                            if coverIdentifier == asset.localIdentifier {
+                                Label("表紙", systemImage: "star.fill")
+                                    .font(.caption2.bold())
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 5)
+                                    .background(.thinMaterial)
+                                    .clipShape(Capsule())
+                                    .padding(6)
+                            }
+                        }
+                        HStack(spacing: 8) {
+                            Button {
+                                setCover(asset)
+                            } label: {
+                                Label("表紙", systemImage: "star")
+                            }
+                            .buttonStyle(.bordered)
+                            .disabled(coverIdentifier == asset.localIdentifier)
+
+                            Button(role: .destructive) {
+                                remove(asset)
+                            } label: {
+                                Label("削除", systemImage: "trash")
+                                    .labelStyle(.iconOnly)
+                            }
+                            .buttonStyle(.bordered)
+                        }
+                        .font(.caption)
+                    }
+                }
+            }
+            .padding(.vertical)
+        }
     }
 }
