@@ -10,11 +10,17 @@ actor PhotoGroupingService {
         self.similarityService = similarityService
     }
 
-    func groups(for assets: [PHAsset], monthKey: String, imageProvider: @escaping @Sendable (PHAsset) async -> UIImage?) async -> [PhotoGroup] {
+    func groups(
+        for assets: [PHAsset],
+        monthKey: String,
+        imageProvider: @escaping @Sendable (PHAsset) async -> UIImage?,
+        progress: (@Sendable (Int, Int) async -> Void)? = nil
+    ) async -> [PhotoGroup] {
         var features: [PhotoFeature] = []
-        for asset in assets {
+        for (index, asset) in assets.enumerated() {
             let image = await imageProvider(asset)
             features.append(await featureExtractor.feature(for: asset, image: image))
+            await progress?(index + 1, assets.count)
         }
 
         var groups: [[PhotoFeature]] = []
@@ -40,6 +46,19 @@ actor PhotoGroupingService {
                 assetLocalIdentifiers: featureGroup.map(\.assetLocalIdentifier),
                 representativeAssetLocalIdentifier: representative,
                 groupType: featureGroup.count == 1 ? .single : .sameScene,
+                createdAt: Date()
+            )
+        }
+    }
+
+    nonisolated func singleGroups(for assets: [PHAsset], monthKey: String) -> [PhotoGroup] {
+        assets.map { asset in
+            PhotoGroup(
+                groupId: "\(monthKey)-\(asset.localIdentifier.replacingOccurrences(of: "/", with: "_"))-1",
+                monthKey: monthKey,
+                assetLocalIdentifiers: [asset.localIdentifier],
+                representativeAssetLocalIdentifier: asset.localIdentifier,
+                groupType: .single,
                 createdAt: Date()
             )
         }

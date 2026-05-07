@@ -10,6 +10,7 @@ struct SwipeView: View {
     @State private var offset: CGSize = .zero
     @State private var isLoading = true
     @State private var loadMessage = "写真を読み込んでいます"
+    @State private var analysisProgress: Double?
 
     private var currentGroup: PhotoGroup? {
         guard currentIndex < groups.count else { return nil }
@@ -26,8 +27,22 @@ struct SwipeView: View {
             header
             Spacer(minLength: 0)
             if isLoading {
-                ProgressView(loadMessage)
-                    .padding()
+                VStack(spacing: 12) {
+                    if let analysisProgress {
+                        ProgressView(value: analysisProgress)
+                    } else {
+                        ProgressView()
+                    }
+                    Text(loadMessage)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    Button("解析せずに始める") {
+                        startWithSinglePhotoGroups()
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(assets.isEmpty)
+                }
+                .padding()
             } else if let currentGroup {
                 PhotoCardView(group: currentGroup, assets: assetsForCurrentGroup)
                     .offset(offset)
@@ -114,6 +129,7 @@ struct SwipeView: View {
 
     private func load() async {
         isLoading = true
+        analysisProgress = nil
         assets = appState.photoLibrary.fetchAssets(monthKey: monthKey)
         let identifiers = assets.map(\.localIdentifier)
         if let storedGroups = appState.decisions.groups(for: monthKey, matching: identifiers) {
@@ -123,11 +139,27 @@ struct SwipeView: View {
             let photoLibrary = appState.photoLibrary
             groups = await appState.grouping.groups(for: assets, monthKey: monthKey) { asset in
                 await photoLibrary.requestImageAsync(for: asset, targetSize: CGSize(width: 180, height: 180))
+            } progress: { completed, total in
+                await MainActor.run {
+                    analysisProgress = total == 0 ? nil : Double(completed) / Double(total)
+                    loadMessage = "写真を解析しています \(completed) / \(total)"
+                }
             }
+            guard isLoading else { return }
             appState.decisions.saveGroups(groups, monthKey: monthKey)
         }
         groups = groups.filter { appState.decisions.decision(for: $0.groupId) == nil }
         currentIndex = 0
+        analysisProgress = nil
+        isLoading = false
+    }
+
+    private func startWithSinglePhotoGroups() {
+        groups = appState.grouping.singleGroups(for: assets, monthKey: monthKey)
+        appState.decisions.saveGroups(groups, monthKey: monthKey)
+        groups = groups.filter { appState.decisions.decision(for: $0.groupId) == nil }
+        currentIndex = 0
+        analysisProgress = nil
         isLoading = false
     }
 
