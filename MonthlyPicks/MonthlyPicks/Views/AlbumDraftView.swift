@@ -35,6 +35,7 @@ struct AlbumDraftView: View {
         }
         .navigationTitle("原稿プレビュー")
         .task { load() }
+        .onAppear { load() }
     }
 
     private func load() {

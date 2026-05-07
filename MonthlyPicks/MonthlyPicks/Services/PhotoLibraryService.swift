@@ -65,7 +65,9 @@ final class PhotoLibraryService: ObservableObject {
         let result = PHAsset.fetchAssets(withLocalIdentifiers: identifiers, options: nil)
         var assets: [PHAsset] = []
         result.enumerateObjects { asset, _, _ in assets.append(asset) }
-        return assets
+        return assets.sorted {
+            ($0.creationDate ?? .distantPast) < ($1.creationDate ?? .distantPast)
+        }
     }
 
     func requestImage(for asset: PHAsset, targetSize: CGSize, contentMode: PHImageContentMode = .aspectFill, completion: @escaping (UIImage?) -> Void) {

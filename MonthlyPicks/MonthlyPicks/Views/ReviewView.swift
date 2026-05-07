@@ -60,13 +60,16 @@ struct ReviewView: View {
                 NavigationLink("アルバム") {
                     AlbumExportView(monthKey: monthKey)
                 }
+                .disabled(keepAssets.isEmpty)
                 Spacer()
                 NavigationLink("PDF") {
                     LayoutSelectView(monthKey: monthKey)
                 }
+                .disabled(keepAssets.isEmpty)
             }
         }
         .task { load() }
+        .onAppear { load() }
     }
 
     private func load() {

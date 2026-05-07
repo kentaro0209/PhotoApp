@@ -23,7 +23,7 @@ struct AlbumExportView: View {
                 Label(isExporting ? "作成中" : "アルバムを作成", systemImage: "plus")
             }
             .buttonStyle(.borderedProminent)
-            .disabled(isExporting)
+            .disabled(isExporting || appState.decisions.keepIdentifiers(for: monthKey).isEmpty)
         }
         .padding()
         .navigationTitle("アルバム作成")
