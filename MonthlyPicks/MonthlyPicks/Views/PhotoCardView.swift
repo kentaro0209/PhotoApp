@@ -7,6 +7,14 @@ struct PhotoCardView: View {
     @Binding var selectedAssetLocalIdentifier: String?
     @State private var previewAssetLocalIdentifier: String?
 
+    private var selectedAsset: PHAsset? {
+        asset(for: selectedAssetLocalIdentifier)
+    }
+
+    private var previewAsset: PHAsset? {
+        asset(for: previewAssetLocalIdentifier) ?? selectedAsset
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             TabView(selection: $previewAssetLocalIdentifier) {
@@ -37,6 +45,23 @@ struct PhotoCardView: View {
             Text(group.assetLocalIdentifiers.count > 1 ? "似た写真をまとめました。残したい1枚を選んでください。" : "少しずつ進めましょう")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
+            if assets.count > 1, let selectedAsset, let previewAsset {
+                HStack(spacing: 10) {
+                    ComparisonPane(title: "残す候補", asset: selectedAsset, highlighted: true)
+                    Image(systemName: "arrow.left.arrow.right")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    ComparisonPane(title: "比較中", asset: previewAsset, highlighted: selectedAsset.localIdentifier == previewAsset.localIdentifier)
+                }
+                Button {
+                    selectedAssetLocalIdentifier = previewAsset.localIdentifier
+                } label: {
+                    Label("これを残す候補にする", systemImage: "heart.fill")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .disabled(selectedAsset.localIdentifier == previewAsset.localIdentifier)
+            }
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
                     ForEach(assets, id: \.localIdentifier) { asset in
@@ -59,7 +84,6 @@ struct PhotoCardView: View {
                                 .stroke(selectedAssetLocalIdentifier == asset.localIdentifier ? Color.accentColor : Color.clear, lineWidth: 3)
                         }
                         .onTapGesture {
-                            selectedAssetLocalIdentifier = asset.localIdentifier
                             previewAssetLocalIdentifier = asset.localIdentifier
                         }
                     }
@@ -80,6 +104,33 @@ struct PhotoCardView: View {
             selectedAssetLocalIdentifier = fallback
             previewAssetLocalIdentifier = fallback
         }
+    }
+
+    private func asset(for identifier: String?) -> PHAsset? {
+        guard let identifier else { return nil }
+        return assets.first { $0.localIdentifier == identifier }
+    }
+}
+
+private struct ComparisonPane: View {
+    let title: String
+    let asset: PHAsset
+    let highlighted: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption2.bold())
+                .foregroundStyle(highlighted ? .tint : .secondary)
+            PhotoThumbnailView(asset: asset, targetSize: CGSize(width: 260, height: 180), contentMode: .aspectFit)
+                .frame(height: 86)
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(highlighted ? Color.accentColor : Color.secondary.opacity(0.2), lineWidth: highlighted ? 2 : 1)
+                }
+        }
+        .frame(maxWidth: .infinity)
     }
 }
 

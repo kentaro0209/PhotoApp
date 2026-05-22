@@ -22,6 +22,16 @@ final class DecisionStore: ObservableObject {
         groupDecisions[groupId]
     }
 
+    func group(for groupId: String, monthKey: String) -> PhotoGroup? {
+        groupsByMonth[monthKey]?.first { $0.groupId == groupId }
+    }
+
+    func groupDecision(forSelectedAssetLocalIdentifier identifier: String, monthKey: String) -> GroupDecision? {
+        groupDecisions.values.first {
+            $0.monthKey == monthKey && $0.selectedAssetLocalIdentifier == identifier
+        }
+    }
+
     func groups(for monthKey: String, matching assetIdentifiers: [String]) -> [PhotoGroup]? {
         guard let stored = groupsByMonth[monthKey], !stored.isEmpty else { return nil }
         let currentIdentifiers = Set(assetIdentifiers)
@@ -75,6 +85,15 @@ final class DecisionStore: ObservableObject {
             selectedCoverByMonth.removeValue(forKey: monthKey)
         }
 
+        save()
+    }
+
+    func updateSelectedAsset(groupId: String, monthKey: String, selectedAssetLocalIdentifier: String) {
+        guard var updated = groupDecisions[groupId], updated.monthKey == monthKey else { return }
+        updated.selectedAssetLocalIdentifier = selectedAssetLocalIdentifier
+        updated.decision = .keep
+        updated.decidedAt = Date()
+        groupDecisions[groupId] = updated
         save()
     }
 

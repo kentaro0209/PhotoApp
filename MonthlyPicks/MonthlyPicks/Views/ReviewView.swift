@@ -7,6 +7,7 @@ struct ReviewView: View {
     @State private var selectedTab = 0
     @State private var keepAssets: [PHAsset] = []
     @State private var holdAssets: [PHAsset] = []
+    @State private var reselectingGroup: PhotoGroup?
 
     var body: some View {
         ScrollView {
@@ -25,6 +26,8 @@ struct ReviewView: View {
                     primaryActionSystemImage: "minus.circle",
                     secondaryActionTitle: "表紙にする",
                     secondaryActionSystemImage: "star",
+                    tertiaryActionTitle: "選び直す",
+                    tertiaryActionSystemImage: "rectangle.stack",
                     isCover: { appState.decisions.isCover($0.localIdentifier, monthKey: monthKey) },
                     primaryAction: { asset in
                         appState.decisions.updateDecision(forSelectedAssetLocalIdentifier: asset.localIdentifier, monthKey: monthKey, to: .hold)
@@ -33,6 +36,11 @@ struct ReviewView: View {
                     secondaryAction: { asset in
                         appState.decisions.setCover(asset.localIdentifier, monthKey: monthKey)
                         load()
+                    },
+                    tertiaryAction: { asset in
+                        guard let decision = appState.decisions.groupDecision(forSelectedAssetLocalIdentifier: asset.localIdentifier, monthKey: monthKey),
+                              let group = appState.decisions.group(for: decision.groupId, monthKey: monthKey) else { return }
+                        reselectingGroup = group
                     }
                 )
                 .padding(.horizontal)
@@ -44,12 +52,15 @@ struct ReviewView: View {
                     primaryActionSystemImage: "heart.fill",
                     secondaryActionTitle: nil,
                     secondaryActionSystemImage: nil,
+                    tertiaryActionTitle: nil,
+                    tertiaryActionSystemImage: nil,
                     isCover: { _ in false },
                     primaryAction: { asset in
                         appState.decisions.updateDecision(forSelectedAssetLocalIdentifier: asset.localIdentifier, monthKey: monthKey, to: .keep)
                         load()
                     },
-                    secondaryAction: nil
+                    secondaryAction: nil,
+                    tertiaryAction: nil
                 )
                 .padding(.horizontal)
             }
@@ -70,6 +81,13 @@ struct ReviewView: View {
         }
         .task { load() }
         .onAppear { load() }
+        .sheet(item: $reselectingGroup) { group in
+            ReselectPhotoView(monthKey: monthKey, group: group) {
+                reselectingGroup = nil
+                load()
+            }
+            .environmentObject(appState)
+        }
     }
 
     private func load() {
@@ -85,9 +103,12 @@ private struct ReviewAssetGrid: View {
     let primaryActionSystemImage: String
     let secondaryActionTitle: String?
     let secondaryActionSystemImage: String?
+    let tertiaryActionTitle: String?
+    let tertiaryActionSystemImage: String?
     let isCover: (PHAsset) -> Bool
     let primaryAction: (PHAsset) -> Void
     let secondaryAction: ((PHAsset) -> Void)?
+    let tertiaryAction: ((PHAsset) -> Void)?
 
     private let columns = [GridItem(.adaptive(minimum: 148), spacing: 12)]
 
@@ -131,12 +152,64 @@ private struct ReviewAssetGrid: View {
                                 }
                                 .buttonStyle(.bordered)
                             }
+
+                            if let tertiaryActionTitle, let tertiaryActionSystemImage, let tertiaryAction {
+                                Button {
+                                    tertiaryAction(asset)
+                                } label: {
+                                    Label(tertiaryActionTitle, systemImage: tertiaryActionSystemImage)
+                                        .labelStyle(.iconOnly)
+                                }
+                                .buttonStyle(.bordered)
+                            }
                         }
                         .font(.caption)
                     }
                 }
             }
             .padding(.vertical)
+        }
+    }
+}
+
+private struct ReselectPhotoView: View {
+    @EnvironmentObject private var appState: AppState
+    let monthKey: String
+    let group: PhotoGroup
+    let didUpdate: () -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    private let columns = [GridItem(.adaptive(minimum: 132), spacing: 12)]
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                LazyVGrid(columns: columns, spacing: 14) {
+                    ForEach(appState.photoLibrary.assets(with: group.assetLocalIdentifiers), id: \.localIdentifier) { asset in
+                        VStack(spacing: 8) {
+                            PhotoThumbnailView(asset: asset, targetSize: CGSize(width: 340, height: 340))
+                                .aspectRatio(1, contentMode: .fill)
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                            Button {
+                                appState.decisions.updateSelectedAsset(groupId: group.groupId, monthKey: monthKey, selectedAssetLocalIdentifier: asset.localIdentifier)
+                                didUpdate()
+                                dismiss()
+                            } label: {
+                                Label("これを残す", systemImage: "heart.fill")
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.bordered)
+                        }
+                    }
+                }
+                .padding()
+            }
+            .navigationTitle("選び直す")
+            .toolbar {
+                Button("閉じる") {
+                    dismiss()
+                }
+            }
         }
     }
 }
