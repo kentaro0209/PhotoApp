@@ -171,7 +171,7 @@ private struct ComparisonPane: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
                 .font(.caption2.bold())
-                .foregroundStyle(highlighted ? .tint : .secondary)
+                .foregroundStyle(highlighted ? Color.accentColor : Color.secondary)
             PhotoThumbnailView(asset: asset, targetSize: CGSize(width: 260, height: 180), contentMode: .aspectFit)
                 .frame(height: 86)
                 .clipShape(RoundedRectangle(cornerRadius: 6))
