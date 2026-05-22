@@ -16,6 +16,6 @@ struct MonthSummary: Identifiable, Hashable {
     }
 
     static func targetCount(for totalPhotos: Int) -> Int {
-        max(10, min(80, Int(Double(totalPhotos) * 0.10)))
+        min(totalPhotos, max(20, min(30, Int(Double(totalPhotos) * 0.10))))
     }
 }

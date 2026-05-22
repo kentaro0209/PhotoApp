@@ -12,6 +12,7 @@ struct SwipeView: View {
     @State private var loadMessage = "写真を読み込んでいます"
     @State private var analysisProgress: Double?
     @State private var selectedAssetLocalIdentifier: String?
+    @State private var comparisonComplete = true
 
     private var currentGroup: PhotoGroup? {
         guard currentIndex < groups.count else { return nil }
@@ -45,10 +46,9 @@ struct SwipeView: View {
                 }
                 .padding()
             } else if let currentGroup {
-                PhotoCardView(group: currentGroup, assets: assetsForCurrentGroup, selectedAssetLocalIdentifier: $selectedAssetLocalIdentifier)
+                PhotoCardView(group: currentGroup, assets: assetsForCurrentGroup, selectedAssetLocalIdentifier: $selectedAssetLocalIdentifier, comparisonComplete: $comparisonComplete)
                     .offset(offset)
                     .rotationEffect(.degrees(Double(offset.width / 24)))
-                    .gesture(dragGesture)
                     .animation(.spring(response: 0.28, dampingFraction: 0.82), value: offset)
                 actionBar
             } else {
@@ -93,7 +93,7 @@ struct SwipeView: View {
             .font(.footnote)
             .foregroundStyle(.secondary)
             if let currentGroup {
-                Text("似た写真 \(selectedPhotoIndex(in: currentGroup)) / \(currentGroup.assetLocalIdentifiers.count)")
+                Text(comparisonComplete ? "代表候補 \(selectedPhotoIndex(in: currentGroup)) / \(currentGroup.assetLocalIdentifiers.count)" : "候補を比較中")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -109,6 +109,7 @@ struct SwipeView: View {
                 .buttonStyle(.borderedProminent)
         }
         .buttonStyle(.bordered)
+        .disabled(!comparisonComplete)
     }
 
     private var assetsForCurrentGroup: [PHAsset] {
@@ -164,6 +165,7 @@ struct SwipeView: View {
         groups = groups.filter { appState.decisions.decision(for: $0.groupId) == nil }
         currentIndex = 0
         selectedAssetLocalIdentifier = currentGroup?.representativeAssetLocalIdentifier ?? currentGroup?.assetLocalIdentifiers.first
+        comparisonComplete = (currentGroup?.assetLocalIdentifiers.count ?? 0) <= 1
         analysisProgress = nil
         isLoading = false
     }
@@ -174,6 +176,7 @@ struct SwipeView: View {
         groups = groups.filter { appState.decisions.decision(for: $0.groupId) == nil }
         currentIndex = 0
         selectedAssetLocalIdentifier = currentGroup?.representativeAssetLocalIdentifier ?? currentGroup?.assetLocalIdentifiers.first
+        comparisonComplete = true
         analysisProgress = nil
         isLoading = false
     }
@@ -184,13 +187,14 @@ struct SwipeView: View {
     }
 
     private func decide(_ type: PhotoDecisionType) {
-        guard let group = currentGroup else { return }
+        guard comparisonComplete, let group = currentGroup else { return }
         let selected = selectedAssetLocalIdentifier ?? group.representativeAssetLocalIdentifier ?? group.assetLocalIdentifiers.first
         appState.decisions.record(group: group, decision: type, selectedAssetLocalIdentifier: selected)
         offset = type == .keep ? CGSize(width: 500, height: 0) : type == .reject ? CGSize(width: -500, height: 0) : CGSize(width: 0, height: 500)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
             currentIndex += 1
             selectedAssetLocalIdentifier = currentGroup?.representativeAssetLocalIdentifier ?? currentGroup?.assetLocalIdentifiers.first
+            comparisonComplete = (currentGroup?.assetLocalIdentifiers.count ?? 0) <= 1
             offset = .zero
         }
     }
@@ -200,5 +204,6 @@ struct SwipeView: View {
         currentIndex -= 1
         appState.decisions.undo(groupId: groups[currentIndex].groupId)
         selectedAssetLocalIdentifier = currentGroup?.representativeAssetLocalIdentifier ?? currentGroup?.assetLocalIdentifiers.first
+        comparisonComplete = (currentGroup?.assetLocalIdentifiers.count ?? 0) <= 1
     }
 }

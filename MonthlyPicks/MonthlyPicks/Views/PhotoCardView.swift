@@ -5,89 +5,83 @@ struct PhotoCardView: View {
     let group: PhotoGroup
     let assets: [PHAsset]
     @Binding var selectedAssetLocalIdentifier: String?
-    @State private var previewAssetLocalIdentifier: String?
+    @Binding var comparisonComplete: Bool
+    @State private var challengerIndex = 1
+    @State private var challengerOffset: CGSize = .zero
 
     private var selectedAsset: PHAsset? {
         asset(for: selectedAssetLocalIdentifier)
     }
 
-    private var previewAsset: PHAsset? {
-        asset(for: previewAssetLocalIdentifier) ?? selectedAsset
+    private var challengerAsset: PHAsset? {
+        guard assets.indices.contains(challengerIndex) else { return nil }
+        let asset = assets[challengerIndex]
+        return asset.localIdentifier == selectedAssetLocalIdentifier ? nil : asset
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            TabView(selection: $previewAssetLocalIdentifier) {
-                ForEach(assets, id: \.localIdentifier) { asset in
-                    ZStack(alignment: .topTrailing) {
-                        PhotoThumbnailView(asset: asset, targetSize: CGSize(width: 900, height: 900), contentMode: .aspectFit)
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
-                        if selectedAssetLocalIdentifier == asset.localIdentifier {
-                            Label("残す候補", systemImage: "heart.fill")
-                                .font(.caption.bold())
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 7)
-                                .background(.thinMaterial)
-                                .clipShape(Capsule())
-                                .padding(10)
-                        }
-                    }
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        selectedAssetLocalIdentifier = asset.localIdentifier
-                    }
-                    .tag(Optional(asset.localIdentifier))
-                }
-            }
-            .tabViewStyle(.page)
-            .frame(maxWidth: .infinity)
-            .aspectRatio(0.78, contentMode: .fit)
-            Text(group.assetLocalIdentifiers.count > 1 ? "似た写真をまとめました。残したい1枚を選んでください。" : "少しずつ進めましょう")
+            Text(assets.count > 1 ? "似た写真を1枚ずつ比べて、残す候補を勝ち残らせます。" : "少しずつ進めましょう")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
-            if assets.count > 1, let selectedAsset, let previewAsset {
+
+            if assets.count > 1, !comparisonComplete, let selectedAsset, let challengerAsset {
+                ComparisonPane(title: "いまの残す候補", asset: selectedAsset, highlighted: true)
+                ZStack(alignment: .topTrailing) {
+                    PhotoThumbnailView(asset: challengerAsset, targetSize: CGSize(width: 900, height: 900), contentMode: .aspectFit)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                    Label("比較中 \(min(challengerIndex + 1, assets.count)) / \(assets.count)", systemImage: "rectangle.stack")
+                        .font(.caption.bold())
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 7)
+                        .background(.thinMaterial)
+                        .clipShape(Capsule())
+                        .padding(10)
+                }
+                .frame(maxWidth: .infinity)
+                .aspectRatio(0.78, contentMode: .fit)
+                .offset(challengerOffset)
+                .rotationEffect(.degrees(Double(challengerOffset.width / 24)))
+                .gesture(challengerDragGesture)
+                .animation(.spring(response: 0.28, dampingFraction: 0.82), value: challengerOffset)
+
                 HStack(spacing: 10) {
-                    ComparisonPane(title: "残す候補", asset: selectedAsset, highlighted: true)
-                    Image(systemName: "arrow.left.arrow.right")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    ComparisonPane(title: "比較中", asset: previewAsset, highlighted: selectedAsset.localIdentifier == previewAsset.localIdentifier)
-                }
-                Button {
-                    selectedAssetLocalIdentifier = previewAsset.localIdentifier
-                } label: {
-                    Label("これを残す候補にする", systemImage: "heart.fill")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.bordered)
-                .disabled(selectedAsset.localIdentifier == previewAsset.localIdentifier)
-            }
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(assets, id: \.localIdentifier) { asset in
-                        ZStack(alignment: .topTrailing) {
-                            PhotoThumbnailView(asset: asset, targetSize: CGSize(width: 150, height: 150))
-                                .frame(width: 66, height: 66)
-                                .clipShape(RoundedRectangle(cornerRadius: 6))
-                            if selectedAssetLocalIdentifier == asset.localIdentifier {
-                                Image(systemName: "heart.fill")
-                                    .font(.caption2)
-                                    .foregroundStyle(.white)
-                                    .padding(5)
-                                    .background(.tint)
-                                    .clipShape(Circle())
-                                    .padding(4)
-                            }
-                        }
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 6)
-                                .stroke(selectedAssetLocalIdentifier == asset.localIdentifier ? Color.accentColor : Color.clear, lineWidth: 3)
-                        }
-                        .onTapGesture {
-                            previewAssetLocalIdentifier = asset.localIdentifier
-                        }
+                    Button {
+                        keepCurrentCandidate()
+                    } label: {
+                        Label("候補のまま", systemImage: "xmark")
+                            .frame(maxWidth: .infinity)
                     }
+                    .buttonStyle(.bordered)
+
+                    Button {
+                        chooseChallenger()
+                    } label: {
+                        Label("こっちを候補に", systemImage: "heart.fill")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
                 }
+                Text("右にスワイプでこの写真を候補に、左にスワイプで候補をそのまま進めます。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else if let selectedAsset {
+                ZStack(alignment: .topTrailing) {
+                    PhotoThumbnailView(asset: selectedAsset, targetSize: CGSize(width: 900, height: 900), contentMode: .aspectFit)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                    Label("この1枚を代表にします", systemImage: "heart.fill")
+                        .font(.caption.bold())
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 7)
+                        .background(.thinMaterial)
+                        .clipShape(Capsule())
+                        .padding(10)
+                }
+                .frame(maxWidth: .infinity)
+                .aspectRatio(0.78, contentMode: .fit)
+                Text("このグループの代表候補が決まりました。残す・見送る・あとでを選んでください。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
         }
         .padding(12)
@@ -97,18 +91,74 @@ struct PhotoCardView: View {
         .onAppear {
             let fallback = group.representativeAssetLocalIdentifier ?? assets.first?.localIdentifier
             selectedAssetLocalIdentifier = selectedAssetLocalIdentifier ?? fallback
-            previewAssetLocalIdentifier = selectedAssetLocalIdentifier
+            resetComparison()
         }
         .onChange(of: group.groupId) {
             let fallback = group.representativeAssetLocalIdentifier ?? assets.first?.localIdentifier
             selectedAssetLocalIdentifier = fallback
-            previewAssetLocalIdentifier = fallback
+            resetComparison()
         }
     }
 
     private func asset(for identifier: String?) -> PHAsset? {
         guard let identifier else { return nil }
         return assets.first { $0.localIdentifier == identifier }
+    }
+
+    private var challengerDragGesture: some Gesture {
+        DragGesture()
+            .onChanged { challengerOffset = $0.translation }
+            .onEnded { value in
+                if value.translation.width > 100 {
+                    chooseChallenger()
+                } else if value.translation.width < -100 {
+                    keepCurrentCandidate()
+                } else {
+                    challengerOffset = .zero
+                }
+            }
+    }
+
+    private func resetComparison() {
+        guard assets.count > 1 else {
+            challengerIndex = 0
+            comparisonComplete = true
+            return
+        }
+        challengerIndex = firstChallengerIndex()
+        comparisonComplete = challengerAsset == nil
+        challengerOffset = .zero
+    }
+
+    private func firstChallengerIndex() -> Int {
+        guard let selectedAssetLocalIdentifier else { return assets.indices.dropFirst().first ?? 0 }
+        return assets.firstIndex { $0.localIdentifier != selectedAssetLocalIdentifier } ?? 0
+    }
+
+    private func advanceChallenge() {
+        if let nextIndex = assets.indices.dropFirst(challengerIndex + 1).first(where: { assets[$0].localIdentifier != selectedAssetLocalIdentifier }) {
+            challengerIndex = nextIndex
+            challengerOffset = .zero
+        } else {
+            comparisonComplete = true
+            challengerOffset = .zero
+        }
+    }
+
+    private func keepCurrentCandidate() {
+        challengerOffset = CGSize(width: -500, height: 0)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.16) {
+            advanceChallenge()
+        }
+    }
+
+    private func chooseChallenger() {
+        guard let challengerAsset else { return }
+        selectedAssetLocalIdentifier = challengerAsset.localIdentifier
+        challengerOffset = CGSize(width: 500, height: 0)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.16) {
+            advanceChallenge()
+        }
     }
 }
 
