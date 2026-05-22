@@ -11,6 +11,7 @@ struct SwipeView: View {
     @State private var isLoading = true
     @State private var loadMessage = "写真を読み込んでいます"
     @State private var analysisProgress: Double?
+    @State private var selectedAssetLocalIdentifier: String?
 
     private var currentGroup: PhotoGroup? {
         guard currentIndex < groups.count else { return nil }
@@ -44,7 +45,7 @@ struct SwipeView: View {
                 }
                 .padding()
             } else if let currentGroup {
-                PhotoCardView(group: currentGroup, assets: assetsForCurrentGroup)
+                PhotoCardView(group: currentGroup, assets: assetsForCurrentGroup, selectedAssetLocalIdentifier: $selectedAssetLocalIdentifier)
                     .offset(offset)
                     .rotationEffect(.degrees(Double(offset.width / 24)))
                     .gesture(dragGesture)
@@ -71,6 +72,10 @@ struct SwipeView: View {
             NavigationLink("見返す") {
                 ReviewView(monthKey: monthKey)
             }
+            Button("まとめ直す") {
+                Task { await reloadGroups() }
+            }
+            .disabled(isLoading)
         }
         .task { await load() }
     }
@@ -88,7 +93,7 @@ struct SwipeView: View {
             .font(.footnote)
             .foregroundStyle(.secondary)
             if let currentGroup {
-                Text("似た写真 1 / \(currentGroup.assetLocalIdentifiers.count)")
+                Text("似た写真 \(selectedPhotoIndex(in: currentGroup)) / \(currentGroup.assetLocalIdentifiers.count)")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -127,6 +132,14 @@ struct SwipeView: View {
             }
     }
 
+    private func selectedPhotoIndex(in group: PhotoGroup) -> Int {
+        guard let selectedAssetLocalIdentifier,
+              let index = group.assetLocalIdentifiers.firstIndex(of: selectedAssetLocalIdentifier) else {
+            return 1
+        }
+        return index + 1
+    }
+
     private func load() async {
         isLoading = true
         analysisProgress = nil
@@ -150,6 +163,7 @@ struct SwipeView: View {
         }
         groups = groups.filter { appState.decisions.decision(for: $0.groupId) == nil }
         currentIndex = 0
+        selectedAssetLocalIdentifier = currentGroup?.representativeAssetLocalIdentifier ?? currentGroup?.assetLocalIdentifiers.first
         analysisProgress = nil
         isLoading = false
     }
@@ -159,17 +173,24 @@ struct SwipeView: View {
         appState.decisions.saveGroups(groups, monthKey: monthKey)
         groups = groups.filter { appState.decisions.decision(for: $0.groupId) == nil }
         currentIndex = 0
+        selectedAssetLocalIdentifier = currentGroup?.representativeAssetLocalIdentifier ?? currentGroup?.assetLocalIdentifiers.first
         analysisProgress = nil
         isLoading = false
     }
 
+    private func reloadGroups() async {
+        appState.decisions.clearGroups(monthKey: monthKey)
+        await load()
+    }
+
     private func decide(_ type: PhotoDecisionType) {
         guard let group = currentGroup else { return }
-        let selected = group.representativeAssetLocalIdentifier ?? group.assetLocalIdentifiers.first
+        let selected = selectedAssetLocalIdentifier ?? group.representativeAssetLocalIdentifier ?? group.assetLocalIdentifiers.first
         appState.decisions.record(group: group, decision: type, selectedAssetLocalIdentifier: selected)
         offset = type == .keep ? CGSize(width: 500, height: 0) : type == .reject ? CGSize(width: -500, height: 0) : CGSize(width: 0, height: 500)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
             currentIndex += 1
+            selectedAssetLocalIdentifier = currentGroup?.representativeAssetLocalIdentifier ?? currentGroup?.assetLocalIdentifiers.first
             offset = .zero
         }
     }
@@ -178,5 +199,6 @@ struct SwipeView: View {
         guard currentIndex > 0 else { return }
         currentIndex -= 1
         appState.decisions.undo(groupId: groups[currentIndex].groupId)
+        selectedAssetLocalIdentifier = currentGroup?.representativeAssetLocalIdentifier ?? currentGroup?.assetLocalIdentifiers.first
     }
 }

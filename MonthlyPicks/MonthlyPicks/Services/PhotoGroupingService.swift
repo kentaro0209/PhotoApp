@@ -26,7 +26,7 @@ actor PhotoGroupingService {
         var groups: [[PhotoFeature]] = []
         for feature in features.sorted(by: { ($0.creationDate ?? .distantPast) < ($1.creationDate ?? .distantPast) }) {
             if let index = groups.firstIndex(where: { group in
-                group.contains { similarityService.score($0, feature) >= 0.75 }
+                group.contains { similarityService.shouldGroup($0, feature) }
             }) {
                 groups[index].append(feature)
             } else {

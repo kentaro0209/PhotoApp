@@ -7,6 +7,26 @@ struct PhotoSimilarityService {
         + visualSimilarity(lhs.perceptualHash, rhs.perceptualHash) * 0.50
     }
 
+    func shouldGroup(_ lhs: PhotoFeature, _ rhs: PhotoFeature) -> Bool {
+        let time = timeSimilarity(lhs.creationDate, rhs.creationDate)
+        let location = locationSimilarity(lhs, rhs)
+        let visual = visualSimilarity(lhs.perceptualHash, rhs.perceptualHash)
+        let weightedScore = time * 0.30 + location * 0.20 + visual * 0.50
+
+        if weightedScore >= 0.75 {
+            return true
+        }
+
+        let bothHaveLocation = lhs.latitude != nil && rhs.latitude != nil
+        if bothHaveLocation {
+            return time >= 0.8 && location >= 0.8
+        }
+
+        // Simulator/imported photos often have no GPS and weak metadata. In that case,
+        // nearby capture times plus a loose visual match are enough to make a comparison group.
+        return time >= 0.8 && visual >= 0.35
+    }
+
     func timeSimilarity(_ lhs: Date?, _ rhs: Date?) -> Double {
         guard let lhs, let rhs else { return 0 }
         let seconds = abs(lhs.timeIntervalSince(rhs))

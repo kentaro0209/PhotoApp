@@ -45,6 +45,11 @@ final class DecisionStore: ObservableObject {
         save()
     }
 
+    func clearGroups(monthKey: String) {
+        groupsByMonth.removeValue(forKey: monthKey)
+        save()
+    }
+
     func record(group: PhotoGroup, decision: PhotoDecisionType, selectedAssetLocalIdentifier: String?) {
         groupDecisions[group.groupId] = GroupDecision(
             groupId: group.groupId,
