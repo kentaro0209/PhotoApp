@@ -56,3 +56,15 @@ MonthlyPicks/MonthlyPicks.xcodeproj
 ```
 
 The app currently uses generated Info.plist settings in the Xcode project, including the photo library permission descriptions.
+
+## Simulator Sample Photos
+
+`SamplePhotos/` contains generated test images for checking the swipe comparison flow. They are grouped as six similar scenes with six variations each.
+
+To load them into the iOS Simulator:
+
+1. Pull the latest repo on the Mac.
+2. Open the Simulator.
+3. Open `SamplePhotos/` in Finder.
+4. Select all `.jpg` files and drag them onto the Simulator window.
+5. Open Family Picks and tap `まとめ直す` for the target month.
